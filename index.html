@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gusano Come Manzanas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+
+        canvas {
+            border: 2px solid #000;
+            background-color: #f0f8ff;
+        }
+
+        .game-over {
+            font-size: 24px;
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div id="gameOverMessage" class="game-over">¡Game Over!</div>
+        <div class="controls">
+            <p>Usa las flechas del teclado para mover la serpiente. ¡Come las manzanas!</p>
+            <div id="medals" class="controls">Medallas: <span id="medalCount">0</span></div>
+            <div id="score" class="controls">Manzanas Comidas: <span id="appleCount">0</span></div>
+            <button onclick="restartGame()">Reiniciar Juego</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const box = 20;
+        const canvasSize = canvas.width / box;
+
+        let snake, direction, apple, score, game, medals, applesEaten;
+
+        function initializeGame() {
+            snake = [{ x: 10 * box, y: 10 * box }];
+            direction = "";
+            apple = { x: Math.floor(Math.random() * canvasSize) * box, y: Math.floor(Math.random() * canvasSize) * box };
+            score = 0;
+            medals = 0; // Reiniciar medallas
+            applesEaten = 0; // Reiniciar el contador de manzanas
+            document.getElementById("gameOverMessage").style.display = "none";
+            document.getElementById("medalCount").innerText = medals; // Mostrar medallas iniciales
+            document.getElementById("appleCount").innerText = applesEaten; // Mostrar manzanas iniciales
+            game = setInterval(() => {
+                updateGame();
+                drawGame();
+            }, 100);
+        }
+
+        function drawGame() {
+            // Dibujar el campo de juego
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Dibujar la serpiente
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillStyle = i === 0 ? "green" : "lightgreen";
+                ctx.fillRect(snake[i].x, snake[i].y, box, box);
+                ctx.strokeStyle = "darkgreen";
+                ctx.strokeRect(snake[i].x, snake[i].y, box, box);
+            }
+
+            // Dibujar la manzana
+            ctx.fillStyle = "red";
+            ctx.fillRect(apple.x, apple.y, box, box);
+        }
+
+        function updateGame() {
+            // Obtener la posición de la cabeza actual
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+
+            // Cambiar la dirección
+            if (direction === "LEFT") snakeX -= box;
+            if (direction === "UP") snakeY -= box;
+            if (direction === "RIGHT") snakeX += box;
+            if (direction === "DOWN") snakeY += box;
+
+            // Permitir que el gusano atraviese las paredes
+            if (snakeX < 0) {
+                snakeX = canvas.width - box; // Sale por la izquierda, reaparece a la derecha
+            } else if (snakeX >= canvas.width) {
+                snakeX = 0; // Sale por la derecha, reaparece a la izquierda
+            }
+
+            if (snakeY < 0) {
+                snakeY = canvas.height - box; // Sale por arriba, reaparece abajo
+            } else if (snakeY >= canvas.height) {
+                snakeY = 0; // Sale por abajo, reaparece arriba
+            }
+
+            // Si la serpiente come la manzana
+            if (snakeX === apple.x && snakeY === apple.y) {
+                score++;
+                applesEaten++; // Incrementar el contador de manzanas
+                updateMedals(); // Llamar a la función de medallas
+                document.getElementById("appleCount").innerText = applesEaten; // Actualizar el contador en la pantalla
+                apple = { x: Math.floor(Math.random() * canvasSize) * box, y: Math.floor(Math.random() * canvasSize) * box };
+            } else {
+                // Quitar la última parte del cuerpo
+                snake.pop();
+            }
+
+            // Añadir nueva cabeza
+            const newHead = { x: snakeX, y: snakeY };
+
+            // Revisar si el gusano choca con su propio cuerpo
+            if (snake.some(segment => segment.x === newHead.x && segment.y === newHead.y)) {
+                gameOver();
+            }
+
+            // Añadir la nueva cabeza
+            snake.unshift(newHead);
+        }
+
+        function directionChange(event) {
+            if (event.keyCode === 37 && direction !== "RIGHT") direction = "LEFT";
+            if (event.keyCode === 38 && direction !== "DOWN") direction = "UP";
+            if (event.keyCode === 39 && direction !== "LEFT") direction = "RIGHT";
+            if (event.keyCode === 40 && direction !== "UP") direction = "DOWN";
+        }
+
+        function updateMedals() {
+            if (score >= 1 && score <= 4 && medals < 1) {
+                medals++;
+                document.getElementById("medalCount").innerText = medals;
+            } else if (score >= 5 && score <= 9 && medals < 2) {
+                medals++;
+                document.getElementById("medalCount").innerText = medals;
+            } else if (score >= 10 && medals < 3) {
+                medals++;
+                document.getElementById("medalCount").innerText = medals;
+            }
+        }
+
+        function gameOver() {
+            document.getElementById("gameOverMessage").style.display = "block";
+            clearInterval(game); // Detiene el juego
+        }
+
+        function restartGame() {
+            clearInterval(game); // Detener cualquier juego anterior
+            initializeGame(); // Reiniciar el juego
+        }
+
+        // Iniciar el juego
+        document.addEventListener("keydown", directionChange);
+        initializeGame();
+    </script>
+</body>
+</html>
